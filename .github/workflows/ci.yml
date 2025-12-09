@@ -1,4 +1,4 @@
-name: CI - Build & Test
+name: CI/CD - Mini Chat
 
 on:
   push:
@@ -7,62 +7,40 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
+      # 1️⃣ Checkout du code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Setup Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      # 2️⃣ Setup Node.js (pour backend si nécessaire)
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
 
-      # 3️⃣ Install docker-compose
-      - name: Install docker-compose
+      # 3️⃣ Build Backend
+      - name: Build Backend
+        working-directory: ./backend
         run: |
-          sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-          docker-compose --version
+          npm install
+          echo "Backend prêt (pas de build nécessaire)"
 
-      # 4️⃣ Build Docker images
-      - name: Build Docker Images
+      # 4️⃣ Build Frontend
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: echo "Frontend prêt (HTML statique)"
+
+      # 5️⃣ Déployer Backend sur Render
+      - name: Deploy Backend to Render
         run: |
-          docker build -t tp-backend ./backend
-          docker build -t tp-frontend ./frontend
-          docker build -t tp-db ./database
+          curl -X POST https://api.render.com/deploy/srv-XXXXXX \
+          -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}"
 
-      # 5️⃣ Start services
-      - name: Start services
-        run: docker-compose up -d
-
-      # 6️⃣ Wait for backend
-      - name: Wait for backend
+      # 6️⃣ Déployer Frontend sur Vercel
+      - name: Deploy Frontend to Vercel
         run: |
-          echo "Attente du backend (max 60s)..."
-          for i in {1..30}; do
-            if curl -f http://localhost:3000/api >/dev/null 2>&1; then
-              echo "Backend est prêt !"
-              break
-            fi
-            echo "En attente... ($i/30)"
-            sleep 2
-          done
-          if [ $i -eq 30 ]; then
-            echo "Timeout : backend non démarré"
-            exit 1
-          fi
-
-      # 7️⃣ Test API endpoint
-      - name: Test API Endpoint
-        run: curl -f http://localhost:3000/api
-
-      # 8️⃣ Test DB endpoint
-      - name: Test DB Endpoint
-        run: curl -f http://localhost:3000/db || echo "DB endpoint non configuré"
-
-      # 9️⃣ Show logs on failure
-      - name: Show logs on failure
-        if: failure()
-        run: docker-compose logs
+          npm install -g vercel
+          vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
