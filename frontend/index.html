@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Chat</title>
+<style>
+body { font-family: Arial; max-width: 600px; margin: auto; }
+#messages { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; }
+input, button { padding: 5px; margin: 5px 0; width: 100%; }
+</style>
+</head>
+<body>
+<h2>Mini Chat</h2>
+<input id="pseudo" placeholder="Ton pseudo" />
+<div id="messages"></div>
+<input id="content" placeholder="Message" />
+<button onclick="sendMessage()">Envoyer</button>
+
+<script>
+const backendUrl = 'http://localhost:3000/api/messages'; // À remplacer après déploiement
+
+async function loadMessages(){
+    const res = await fetch(backendUrl);
+    const msgs = await res.json();
+    const container = document.getElementById('messages');
+    container.innerHTML = msgs.map(m => `<b>${m.author}</b> [${new Date(m.time).toLocaleTimeString()}]: ${m.content}`).join('<br>');
+}
+async function sendMessage(){
+    const author = document.getElementById('pseudo').value;
+    const content = document.getElementById('content').value;
+    if(!author || !content) return alert("Pseudo et message requis");
+    await fetch(backendUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ author, content })
+    });
+    document.getElementById('content').value = '';
+    loadMessages();
+}
+setInterval(loadMessages, 3000);
+loadMessages();
+</script>
+</body>
+</html>
+
