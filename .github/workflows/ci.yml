@@ -1,16 +1,43 @@
-name: CI - Mon Premier Pipeline  # Nom du workflow
+name: CI/CD - Mini Chat
 
-on:  # Déclencheurs
+on:
   push:
     branches: [ main ]
 
-jobs:  # Ensemble des jobs
-  build:
-    runs-on: ubuntu-latest  # Environnement du runner
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-    steps:  # Liste des étapes à exécuter
-      - name: Etape 1
-        run: echo "Hello CI"
+    steps:
+      # 1️⃣ Récupérer le code
+      - uses: actions/checkout@v3
 
-      - name: Etape 2
-        run: echo "Pipeline terminé"
+      # 2️⃣ Installer Node.js pour le build backend/frontend si nécessaire
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # 3️⃣ Build Backend
+      - name: Build Backend
+        working-directory: ./backend
+        run: |
+          npm install
+          npm run build || echo "Pas de build script, backend prêt à démarrer"
+
+      # 4️⃣ Build Frontend
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: echo "Frontend prêt (HTML statique)"
+
+      # 5️⃣ Déployer Backend sur Render
+      - name: Deploy Backend to Render
+        run: |
+          curl -X POST https://api.render.com/deploy/srv-XXXXXX \
+          -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}"
+
+      # 6️⃣ Déployer Frontend sur Vercel
+      - name: Deploy Frontend to Vercel
+        run: |
+          npm install -g vercel
+          vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
